@@ -1,47 +1,45 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"simengine/api"
 	"syscall"
 	"time"
-
-	"github.com/bryanC29/infra-play/simulation-engine/api"
 )
 
 func main() {
-    // Configuration (could be made dynamic via env vars or flags)
-    addr := ":3080"
-    server := &http.Server{
-        Addr:         addr,
-        Handler:      api.NewRouter(),
-        ReadTimeout:  15 * time.Second,
-        WriteTimeout: 15 * time.Second,
-        IdleTimeout:  60 * time.Second,
-    }
 
-    // Channel to catch shutdown signals
-    stop := make(chan os.Signal, 1)
-    signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	port := ":3030"
+	server := &http.Server{
+		Addr: port,
+		Handler: api.NewRouter(),
+		ReadTimeout: 15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout: 60 * time.Second,
+	}
 
-    go func() {
-        log.Printf("Simulator Engine is running at %s\n", addr)
-        if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-            log.Fatalf("Failed to start server: %v", err)
-        }
-    }()
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
-    <-stop // Wait for shutdown signal
+	go func() {
+		log.Printf("Engine running at %s\n", port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Engine failed to start %v", err)
+		}
+	}()
 
-    log.Println("Shutting down engine")
-    shutdownCtx, cancel := time.WithTimeout(time.Background(), 10*time.Second)
-    defer cancel()
+	<-stop
 
-    if err := server.Shutdown(shutdownCtx); err != nil {
-        log.Fatalf("Shutdown failed: %v", err)
-    }
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15 * time.Second)
+	defer cancel()
 
-    log.Println("Engine stopped cleanly")
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("Enging stopped %v", err)
+	}
+
+	log.Printf("Shutdown complete")
 }

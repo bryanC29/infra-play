@@ -1,30 +1,27 @@
 package api
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/chi"
 )
 
-// NewRouter initializes and returns a configured HTTP router.
 func NewRouter() http.Handler {
-    r := chi.NewRouter()
+	r := chi.NewRouter()
 
-    // === Global Middleware ===
-    r.Use(middleware.RequestID)       // Adds request ID to context
-    r.Use(middleware.RealIP)          // Gets the real IP from proxy headers
-    r.Use(middleware.Logger)          // Logs all requests
-    r.Use(middleware.Recoverer)       // Catches panics and returns 500
-    r.Use(middleware.Timeout(10 * 1e9)) // Optional: 10s timeout per request
+	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
 
-    // === Routes ===
-    r.Post("/simulate", handleSimulation)
+		payload := map[string]string{"status": "ok"}
 
-    // Health check
-    r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
-        RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-    })
+		if err := json.NewEncoder(w).Encode(payload); err != nil {
+			http.Error(w, "Failed", http.StatusInternalServerError)
+		}
+	})
+	fmt.Printf("Hello")
 
-    return r
+	return r
 }
